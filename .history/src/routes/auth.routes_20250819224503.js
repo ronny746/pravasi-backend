@@ -1,0 +1,1 @@
+router.post('/register',  AuthController.register);
