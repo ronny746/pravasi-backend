@@ -207,7 +207,7 @@ exports.resendOtp = async (req, res) => {
       });
     }
 
-    if (user.phoneVerified) {
+    if (user.isVerified) {
       return res.status(400).json({
         success: false,
         message: 'User is already verified',

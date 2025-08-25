@@ -9,7 +9,7 @@ const UserSchema = new mongoose.Schema({
   username: { type: String },
   phone: { type: String, unique: true },
   otp: { type: String },
-  isVerified: { type: Boolean, default: false },
+  accountVerified: { type: Boolean, default: false },
   phoneVerified: { type: Boolean, default: false },
   emailVerified: { type: Boolean, default: false },
   bloodGroupEn: { type: String },

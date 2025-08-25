@@ -33,7 +33,7 @@ exports.register = async (req, res) => {
 
     if (existingUser) {
       if (existingUser.phone === phone) {
-        if (existingUser.isVerified) {
+        if (existingUser.accountVerified) {
           return res.status(409).json({
             success: false,
             message: 'User with this phone number already exists and is verified',
@@ -81,7 +81,7 @@ exports.register = async (req, res) => {
       occupationDesignationHi: occupationDesignationHi || null,
       photoUrl: photoUrl || null,
       otp,
-      isVerified: false
+      accountVerified: false
     });
 
     await newUser.save();
@@ -142,7 +142,7 @@ exports.verifyOtp = async (req, res) => {
       });
     }
 
-    if (user.phoneVerified) {
+    if (user.accountVerified) {
       return res.status(400).json({
         success: false,
         message: 'User is already verified',
@@ -159,7 +159,7 @@ exports.verifyOtp = async (req, res) => {
     }
 
     // Verify user
-    user.phoneVerified = true;
+    user.accountVerified = true;
     user.otp = null;
     await user.save();
 
@@ -207,7 +207,7 @@ exports.resendOtp = async (req, res) => {
       });
     }
 
-    if (user.phoneVerified) {
+    if (user.accountVerified) {
       return res.status(400).json({
         success: false,
         message: 'User is already verified',
@@ -274,7 +274,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    if (!user.isVerified) {
+    if (!user.accountVerified) {
       return res.status(403).json({
         success: false,
         message: 'User account is not verified. Please verify OTP first.',

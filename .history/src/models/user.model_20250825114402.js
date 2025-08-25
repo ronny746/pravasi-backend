@@ -11,7 +11,7 @@ const UserSchema = new mongoose.Schema({
   otp: { type: String },
   isVerified: { type: Boolean, default: false },
   phoneVerified: { type: Boolean, default: false },
-  emailVerified: { type: Boolean, default: false },
+  phoneVerified: { type: Boolean, default: false },
   bloodGroupEn: { type: String },
   bloodGroupHi: { type: String },
   occupationTypeEn: { type: String },

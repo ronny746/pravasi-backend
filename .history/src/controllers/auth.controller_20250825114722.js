@@ -159,7 +159,7 @@ exports.verifyOtp = async (req, res) => {
     }
 
     // Verify user
-    user.phoneVerified = true;
+    user.isVerified = true;
     user.otp = null;
     await user.save();
 
@@ -207,7 +207,7 @@ exports.resendOtp = async (req, res) => {
       });
     }
 
-    if (user.phoneVerified) {
+    if (user.isVerified) {
       return res.status(400).json({
         success: false,
         message: 'User is already verified',
