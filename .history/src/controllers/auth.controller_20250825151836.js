@@ -834,7 +834,7 @@ exports.resendOtp = async (req, res) => {
 
     // Generate new OTP
     // const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
-     const newOtp = "1234";
+     const otp = "1234";
     
     user.otp = newOtp;
     await user.save();
