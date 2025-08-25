@@ -1061,6 +1061,17 @@ exports.updatePassword = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const { userId } = req.params;
+    const {
+      nameEn, nameHi, email, phone, username, password,
+      bloodGroupEn, bloodGroupHi,
+      addressCurrentEn, addressCurrentHi,
+      addressPermanentEn, addressPermanentHi,
+      occupationTypeEn, occupationTypeHi,
+      occupationCompanyEn, occupationCompanyHi,
+      occupationDesignationEn, occupationDesignationHi,
+      photoUrl, deviceToken
+    } = req.body;
+
     if (!userId) {
       return res.status(400).json({ success: false, message: "User ID is required", statusCode: 400 });
     }
@@ -1074,18 +1085,7 @@ exports.updateProfile = async (req, res) => {
       return res.status(403).json({ success: false, message: "Please verify your phone number first", statusCode: 403 });
     }
 
-    const {
-      nameEn, nameHi, email, phone, username, password,
-      bloodGroupEn, bloodGroupHi,
-      addressCurrentEn, addressCurrentHi,
-      addressPermanentEn, addressPermanentHi,
-      occupationTypeEn, occupationTypeHi,
-      occupationCompanyEn, occupationCompanyHi,
-      occupationDesignationEn, occupationDesignationHi,
-      photoUrl, deviceToken
-    } = req.body;
-
-    // Uniqueness checks
+    // Check uniqueness (email, phone, username)
     if (email && email !== user.email) {
       const exists = await User.findOne({ email, _id: { $ne: userId } });
       if (exists) return res.status(409).json({ success: false, message: "Email already exists", statusCode: 409 });
@@ -1122,17 +1122,15 @@ exports.updateProfile = async (req, res) => {
     if (photoUrl !== undefined) updateFields.photoUrl = photoUrl;
     if (deviceToken !== undefined) updateFields.deviceToken = deviceToken;
 
-    // 🔑 Merge DB user + updateFields
-    const snapshot = { ...user.toObject(), ...updateFields };
+    // Mark profile as verified (since it's being filled)
+    updateFields.isVerified = true;
 
-    // Required fields list
+    // ✅ Check if profile is fully completed
     const allRequired = [
-      snapshot.nameEn, snapshot.email, snapshot.phone,
-      snapshot.bloodGroupEn, snapshot.addressCurrentEn, snapshot.addressPermanentEn,
-      snapshot.occupationTypeEn, snapshot.occupationCompanyEn, snapshot.occupationDesignationEn,
-      snapshot.photoUrl
+      nameEn, email, phone, username,
+      bloodGroupEn, addressCurrentEn, addressPermanentEn,
+      occupationTypeEn, occupationCompanyEn, occupationDesignationEn, photoUrl
     ];
-
 
     updateFields.isAccountCompleted = allRequired.every(field => field && field.toString().trim() !== "");
 
@@ -1142,9 +1140,7 @@ exports.updateProfile = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: updatedUser.isAccountCompleted
-        ? "Profile updated successfully. Account is complete."
-        : "Profile updated successfully. Some fields are still missing.",
+      message: "Profile updated successfully",
       data: { user: updatedUser },
       statusCode: 200
     });
@@ -1158,7 +1154,6 @@ exports.updateProfile = async (req, res) => {
     return res.status(500).json({ success: false, message: "Internal server error", statusCode: 500 });
   }
 };
-
 
 
 // GET PROFILE

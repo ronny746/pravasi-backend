@@ -1132,7 +1132,7 @@ exports.updateProfile = async (req, res) => {
       snapshot.occupationTypeEn, snapshot.occupationCompanyEn, snapshot.occupationDesignationEn,
       snapshot.photoUrl
     ];
-
+    console.log(allRequired);
 
     updateFields.isAccountCompleted = allRequired.every(field => field && field.toString().trim() !== "");
 

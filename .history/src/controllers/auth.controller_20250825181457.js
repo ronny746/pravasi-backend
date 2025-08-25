@@ -1127,12 +1127,12 @@ exports.updateProfile = async (req, res) => {
 
     // Required fields list
     const allRequired = [
-      snapshot.nameEn, snapshot.email, snapshot.phone,
+      snapshot.nameEn, snapshot.email, snapshot.phone, snapshot.username,
       snapshot.bloodGroupEn, snapshot.addressCurrentEn, snapshot.addressPermanentEn,
       snapshot.occupationTypeEn, snapshot.occupationCompanyEn, snapshot.occupationDesignationEn,
       snapshot.photoUrl
     ];
-
+    co
 
     updateFields.isAccountCompleted = allRequired.every(field => field && field.toString().trim() !== "");
 

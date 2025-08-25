@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
-  nameEn: { type: String },
+  nameEn: { type: String},
   nameHi: { type: String },
   password: { type: String },
   email: { type: String },
@@ -12,7 +12,7 @@ const UserSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   phoneVerified: { type: Boolean, default: false },
   emailVerified: { type: Boolean, default: false },
-  isAccountCompleted: { type: Boolean, default: false },
+  isAccountCompleted
   bloodGroupEn: { type: String },
   bloodGroupHi: { type: String },
   occupationTypeEn: { type: String },
