@@ -1,4 +1,5 @@
 
+
 const User = require('../models/user.model');
 
 // SEND OTP - Direct API for sending OTP (replaces register)
@@ -372,9 +373,9 @@ exports.updateProfile = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found", statusCode: 404 });
     }
 
-    // if (!user.phoneVerified) {
-    //   return res.status(403).json({ success: false, message: "Please verify your phone number first", statusCode: 403 });
-    // }
+    if (!user.phoneVerified) {
+      return res.status(403).json({ success: false, message: "Please verify your phone number first", statusCode: 403 });
+    }
 
     const {
       nameEn, nameHi, email, phone, username, 
