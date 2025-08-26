@@ -47,7 +47,7 @@
 //           });
 //         }
 //       }
-
+      
 //       if (email && existingUser.email === email) {
 //         return res.status(409).json({
 //           success: false,
@@ -99,7 +99,7 @@
 
 //   } catch (err) {
 //     console.error('Register error:', err);
-
+    
 //     // Handle duplicate key error
 //     if (err.code === 11000) {
 //       const field = Object.keys(err.keyValue)[0];
@@ -531,7 +531,7 @@
 
 //   } catch (err) {
 //     console.error('Update Profile error:', err);
-
+    
 //     // Handle duplicate key error
 //     if (err.code === 11000) {
 //       const field = Object.keys(err.keyValue)[0];
@@ -646,7 +646,7 @@ exports.sendOtp = async (req, res) => {
 
     // Generate OTP
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
-
+  
 
     if (user) {
       // User exists, update OTP
@@ -689,7 +689,7 @@ exports.sendOtp = async (req, res) => {
 
   } catch (err) {
     console.error('Send OTP error:', err);
-
+    
     // Handle duplicate key error
     if (err.code === 11000) {
       return res.status(409).json({
@@ -821,7 +821,7 @@ exports.resendOtp = async (req, res) => {
     if (user.updatedAt) {
       const timeSinceLastUpdate = new Date() - new Date(user.updatedAt);
       const minInterval = 60 * 1000; // 60 seconds
-
+      
       if (timeSinceLastUpdate < minInterval) {
         const remainingTime = Math.ceil((minInterval - timeSinceLastUpdate) / 1000);
         return res.status(429).json({
@@ -834,8 +834,8 @@ exports.resendOtp = async (req, res) => {
 
     // Generate new OTP
     const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
-
-
+    
+    
     user.otp = newOtp;
     await user.save();
 
@@ -1138,7 +1138,7 @@ exports.updateProfile = async (req, res) => {
 
     // Update user
     const updatedUser = await User.findByIdAndUpdate(userId, updateFields, { new: true, runValidators: true })
-      .select("-otp");
+      .select(" -otp");
 
     return res.status(200).json({
       success: true,
