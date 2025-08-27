@@ -11,7 +11,7 @@ const mongoose = require('mongoose');
 
 // Routes & Socket Handler
 const authRoutes = require('./routes/auth.routes');
-const dashboardRoutes = require('./routes/dashboard.routes');
+const dashboardRoutes = require('./src/routes/');
 
 const chatRoutes = require('./routes/chatRoutes');
 

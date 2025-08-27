@@ -1,15 +1,7 @@
-const User = require('../models/user.model');
-const Counter = require('../models/counter.model');
 
-// Standardized response helper
-const sendResponse = (res, success, message, data = null, statusCode = 200) => {
-  return res.status(200).json({
-    success,
-    message,
-    data,
-    statusCode
-  });
-};
+const User = require('../models/user.model');
+const Counter = require('./m');
+
 
 async function getNextPublicId() {
   const doc = await Counter.findOneAndUpdate(
@@ -27,12 +19,12 @@ exports.sendOtp = async (req, res) => {
     const { phone } = req.body;
 
     if (!phone) {
-      return sendResponse(res, false, 'Phone number is required', null, 400);
+      return res.status(400).json({ success: false, message: 'Phone number is required', statusCode: 400 });
     }
 
     const phoneRegex = /^[6-9]\d{9}$/;
     if (!phoneRegex.test(phone)) {
-      return sendResponse(res, false, 'Please enter a valid 10-digit phone number', null, 400);
+      return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit phone number', statusCode: 400 });
     }
 
     let user = await User.findOne({ phone });
@@ -45,15 +37,21 @@ exports.sendOtp = async (req, res) => {
       user.otp = otp;
       await user.save();
 
-      return sendResponse(res, true, 'OTP sent successfully to your registered phone number', {
-        userId: user._id,
-        phone: user.phone,
-        publicId: user.publicId || null,
-        isExistingUser: true,
-        otp // remove in prod
-      }, 200);
+      return res.status(200).json({
+        success: true,
+        message: 'OTP sent successfully to your registered phone number',
+        data: {
+          userId: user._id,
+          phone: user.phone,
+          publicId: user.publicId || null,
+          isExistingUser: true,
+          otp // remove in prod
+        },
+        statusCode: 200
+      });
     } else {
       // NEW user: assign PR id atomically + create
+      // optional: use a session/transaction to avoid "burning" a number on rare failures
       const session = await User.startSession();
       let newUser;
       await session.withTransaction(async () => {
@@ -69,25 +67,39 @@ exports.sendOtp = async (req, res) => {
 
       newUser = newUser[0]; // because create([]) with session returns array
 
-      return sendResponse(res, true, 'OTP sent successfully to your phone number', {
-        userId: newUser._id,
-        phone: newUser.phone,
-        publicId: newUser.publicId,
-        isExistingUser: false,
-        otp // remove in prod
-      }, 201);
+      return res.status(201).json({
+        success: true,
+        message: 'OTP sent successfully to your phone number',
+        data: {
+          userId: newUser._id,
+          phone: newUser.phone,
+          publicId: newUser.publicId,
+          isExistingUser: false,
+          otp // remove in prod
+        },
+        statusCode: 201
+      });
     }
   } catch (err) {
     console.error('Send OTP error:', err);
 
     if (err.code === 11000) {
-      return sendResponse(res, false, 'Duplicate key error (phone/publicId already exists)', null, 409);
+      // could be duplicate phone OR (rarely) duplicate publicId if two processes raced without transaction
+      return res.status(409).json({
+        success: false,
+        message: 'Duplicate key error (phone/publicId already exists)',
+        statusCode: 409
+      });
     }
 
-    // Network or other issues - still return 200 with error message
-    return sendResponse(res, false, 'Internal server error occurred while sending OTP. Please check your network connection and try again.', null, 500);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error occurred while sending OTP',
+      statusCode: 500
+    });
   }
 };
+
 
 // VERIFY OTP - Enhanced with expiry and attempt limits
 exports.verifyOtp = async (req, res) => {
@@ -96,13 +108,21 @@ exports.verifyOtp = async (req, res) => {
 
     // Validation
     if (!phone || !otp) {
-      return sendResponse(res, false, 'Phone number and OTP are required', null, 400);
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number and OTP are required',
+        statusCode: 400
+      });
     }
 
     const user = await User.findOne({ phone });
 
     if (!user) {
-      return sendResponse(res, false, 'User not found with this phone number. Please send OTP first.', null, 404);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found with this phone number',
+        statusCode: 404
+      });
     }
 
     // Check if OTP has expired - Using basic time check (5 minutes)
@@ -112,11 +132,19 @@ exports.verifyOtp = async (req, res) => {
     const fiveMinutesInMs = 5 * 60 * 1000;
 
     if (timeDifference > fiveMinutesInMs) {
-      return sendResponse(res, false, 'OTP has expired. Please request a new one.', null, 400);
+      return res.status(400).json({
+        success: false,
+        message: 'OTP has expired. Please request a new one.',
+        statusCode: 400
+      });
     }
 
     if (user.otp !== otp) {
-      return sendResponse(res, false, 'Invalid OTP provided', null, 400);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid OTP provided',
+        statusCode: 400
+      });
     }
 
     // Verify user
@@ -129,16 +157,25 @@ exports.verifyOtp = async (req, res) => {
     delete userResponse.password;
     delete userResponse.otp;
 
-    return sendResponse(res, true, 'OTP verified successfully. You can now update your profile.', {
-      userId: user._id,
-      phone: user.phone,
-      phoneVerified: true,
-      user: userResponse
-    }, 200);
+    return res.status(200).json({
+      success: true,
+      message: 'OTP verified successfully. You can now update your profile.',
+      data: {
+        userId: user._id,
+        phone: user.phone,
+        phoneVerified: true,
+        user: userResponse
+      },
+      statusCode: 200
+    });
 
   } catch (err) {
     console.error('Verify OTP error:', err);
-    return sendResponse(res, false, 'Internal server error occurred during OTP verification. Please check your network connection and try again.', null, 500);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error occurred during OTP verification',
+      statusCode: 500
+    });
   }
 };
 
@@ -149,17 +186,29 @@ exports.resendOtp = async (req, res) => {
 
     // Validation
     if (!phone) {
-      return sendResponse(res, false, 'Phone number is required', null, 400);
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required',
+        statusCode: 400
+      });
     }
 
     const user = await User.findOne({ phone });
 
     if (!user) {
-      return sendResponse(res, false, 'User not found with this phone number. Please send OTP first.', null, 404);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found with this phone number. Please send OTP first.',
+        statusCode: 404
+      });
     }
 
     if (user.phoneVerified) {
-      return sendResponse(res, false, 'User is already verified', null, 400);
+      return res.status(400).json({
+        success: false,
+        message: 'User is already verified',
+        statusCode: 400
+      });
     }
 
     // Basic rate limiting using updatedAt field (allow resend every 60 seconds)
@@ -169,24 +218,38 @@ exports.resendOtp = async (req, res) => {
 
       if (timeSinceLastUpdate < minInterval) {
         const remainingTime = Math.ceil((minInterval - timeSinceLastUpdate) / 1000);
-        return sendResponse(res, false, `Please wait ${remainingTime} seconds before requesting a new OTP`, null, 429);
+        return res.status(429).json({
+          success: false,
+          message: `Please wait ${remainingTime} seconds before requesting a new OTP`,
+          statusCode: 429
+        });
       }
     }
 
     // Generate new OTP
     const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
 
+
     user.otp = newOtp;
     await user.save();
 
-    return sendResponse(res, true, 'OTP resent successfully', {
-      phone: user.phone,
-      otp: newOtp // Remove this in production
-    }, 200);
+    return res.status(200).json({
+      success: true,
+      message: 'OTP resent successfully',
+      data: {
+        phone: user.phone,
+        otp: newOtp // Remove this in production
+      },
+      statusCode: 200
+    });
 
   } catch (err) {
     console.error('Resend OTP error:', err);
-    return sendResponse(res, false, 'Internal server error occurred while resending OTP. Please check your network connection and try again.', null, 500);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error occurred while resending OTP',
+      statusCode: 500
+    });
   }
 };
 
@@ -197,7 +260,11 @@ exports.login = async (req, res) => {
 
     // Validation - either phone or email required along with password
     if ((!phone && !email) || !password) {
-      return sendResponse(res, false, 'Either phone or email is required along with password', null, 400);
+      return res.status(400).json({
+        success: false,
+        message: 'Either phone or email is required along with password',
+        statusCode: 400
+      });
     }
 
     // Find user by phone or email
@@ -209,16 +276,28 @@ exports.login = async (req, res) => {
     });
 
     if (!user) {
-      return sendResponse(res, false, 'User not found with provided credentials. Please register first.', null, 404);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found with provided credentials',
+        statusCode: 404
+      });
     }
 
     // Check if user is phone verified
     if (!user.phoneVerified) {
-      return sendResponse(res, false, 'Please verify your phone number first', null, 403);
+      return res.status(403).json({
+        success: false,
+        message: 'Please verify your phone number first',
+        statusCode: 403
+      });
     }
 
     if (user.password !== password) {
-      return sendResponse(res, false, 'Invalid credentials provided', null, 401);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials provided',
+        statusCode: 401
+      });
     }
 
     // Update user online status and last seen
@@ -231,14 +310,23 @@ exports.login = async (req, res) => {
     delete userResponse.password;
     delete userResponse.otp;
 
-    return sendResponse(res, true, 'Login successful', {
-      userId: user._id,
-      user: userResponse
-    }, 200);
+    return res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        userId: user._id,
+        user: userResponse
+      },
+      statusCode: 200
+    });
 
   } catch (err) {
     console.error('Login error:', err);
-    return sendResponse(res, false, 'Internal server error occurred during login. Please check your network connection and try again.', null, 500);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error occurred during login',
+      statusCode: 500
+    });
   }
 };
 
@@ -247,38 +335,56 @@ exports.uploadImage = async (req, res) => {
   try {
     // Check if file was uploaded
     if (!req.file) {
-      return sendResponse(res, false, 'No image file uploaded', null, 400);
+      return res.status(400).json({
+        success: false,
+        message: 'No image file uploaded',
+        statusCode: 400
+      });
     }
 
     // Get file details
     const imageUrl = `/images/${req.file.filename}`;
 
-    return sendResponse(res, true, 'Image uploaded successfully', {
-      filename: req.file.filename,
-      originalName: req.file.originalname,
-      imageUrl: imageUrl,
-      size: req.file.size,
-      mimetype: req.file.mimetype
-    }, 200);
+    return res.status(200).json({
+      success: true,
+      message: 'Image uploaded successfully',
+      data: {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        imageUrl: imageUrl,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      },
+      statusCode: 200
+    });
 
   } catch (err) {
     console.error('Upload Image error:', err);
-    return sendResponse(res, false, 'Internal server error occurred while uploading image. Please check your network connection and try again.', null, 500);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error occurred while uploading image',
+      statusCode: 500
+    });
   }
 };
 
+// UPDATE PASSWORD
 // UPDATE PROFILE - Enhanced with password update functionality
 exports.updateProfile = async (req, res) => {
   try {
     const { userId } = req.params;
     if (!userId) {
-      return sendResponse(res, false, "User ID is required", null, 400);
+      return res.status(400).json({ success: false, message: "User ID is required", statusCode: 400 });
     }
 
     const user = await User.findById(userId);
     if (!user) {
-      return sendResponse(res, false, "User not found. Please check the user ID and try again.", null, 404);
+      return res.status(404).json({ success: false, message: "User not found", statusCode: 404 });
     }
+
+    // if (!user.phoneVerified) {
+    //   return res.status(403).json({ success: false, message: "Please verify your phone number first", statusCode: 403 });
+    // }
 
     const {
       nameEn, nameHi, email, phone, username, 
@@ -292,18 +398,57 @@ exports.updateProfile = async (req, res) => {
       photoUrl, deviceToken
     } = req.body;
 
+    // Password update validation (if user wants to update password)
+    // if (password) {
+    //   // Check if old password is provided
+    //   if (!oldPassword) {
+    //     return res.status(400).json({
+    //       success: false,
+    //       message: 'Old password is required to update password',
+    //       statusCode: 400
+    //     });
+    //   }
+
+    //   // Verify old password
+    //   if (user.password !== oldPassword) {
+    //     return res.status(400).json({
+    //       success: false,
+    //       message: 'Old password is incorrect',
+    //       statusCode: 400
+    //     });
+    //   }
+
+    //   // Check if new password is same as old password
+    //   if (oldPassword === password) {
+    //     return res.status(400).json({
+    //       success: false,
+    //       message: 'New password cannot be the same as old password',
+    //       statusCode: 400
+    //     });
+    //   }
+
+    //   // Check password length
+    //   if (password.length < 6) {
+    //     return res.status(400).json({
+    //       success: false,
+    //       message: 'New password must be at least 6 characters long',
+    //       statusCode: 400
+    //     });
+    //   }
+    // }
+
     // Uniqueness checks
     if (email && email !== user.email) {
       const exists = await User.findOne({ email, _id: { $ne: userId } });
-      if (exists) return sendResponse(res, false, "Email already exists", null, 409);
+      if (exists) return res.status(409).json({ success: false, message: "Email already exists", statusCode: 409 });
     }
     if (phone && phone !== user.phone) {
       const exists = await User.findOne({ phone, _id: { $ne: userId } });
-      if (exists) return sendResponse(res, false, "Phone number already exists", null, 409);
+      if (exists) return res.status(409).json({ success: false, message: "Phone number already exists", statusCode: 409 });
     }
     if (username && username !== user.username) {
       const exists = await User.findOne({ username, _id: { $ne: userId } });
-      if (exists) return sendResponse(res, false, "Username already exists", null, 409);
+      if (exists) return res.status(409).json({ success: false, message: "Username already exists", statusCode: 409 });
     }
 
     // Collect update fields
@@ -357,17 +502,24 @@ exports.updateProfile = async (req, res) => {
         : "Profile and password updated successfully. Some fields are still missing.";
     }
 
-    return sendResponse(res, true, successMessage, { user: updatedUser }, 200);
+    return res.status(200).json({
+      success: true,
+      message: successMessage,
+      data: { user: updatedUser },
+      statusCode: 200
+    });
 
   } catch (err) {
     console.error("Update Profile error:", err);
     if (err.code === 11000) {
       const field = Object.keys(err.keyValue)[0];
-      return sendResponse(res, false, `${field} already exists`, null, 409);
+      return res.status(409).json({ success: false, message: `${field} already exists`, statusCode: 409 });
     }
-    return sendResponse(res, false, "Internal server error occurred while updating profile. Please check your network connection and try again.", null, 500);
+    return res.status(500).json({ success: false, message: "Internal server error", statusCode: 500 });
   }
 };
+
+
 
 // GET PROFILE
 exports.getProfile = async (req, res) => {
@@ -376,20 +528,39 @@ exports.getProfile = async (req, res) => {
 
     // Validation
     if (!userId) {
-      return sendResponse(res, false, 'User ID is required', null, 400);
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required',
+        statusCode: 400
+      });
     }
 
     const user = await User.findById(userId).select('-password -otp');
 
     if (!user) {
-      return sendResponse(res, false, 'User not found. Please check the user ID and try again.', null, 404);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        statusCode: 404
+      });
     }
 
-    return sendResponse(res, true, 'Profile fetched successfully', { user }, 200);
+    return res.status(200).json({
+      success: true,
+      message: 'Profile fetched successfully',
+      data: {
+        user
+      },
+      statusCode: 200
+    });
 
   } catch (err) {
     console.error('Get Profile error:', err);
-    return sendResponse(res, false, 'Internal server error occurred while fetching profile. Please check your network connection and try again.', null, 500);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error occurred while fetching profile',
+      statusCode: 500
+    });
   }
 };
 
@@ -398,15 +569,21 @@ exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find().select('-password -otp');
 
-    if (!users || users.length === 0) {
-      return sendResponse(res, false, 'No users found in the system', [], 404);
-    }
-
-    return sendResponse(res, true, 'Users fetched successfully', users, 200);
+    return res.status(200).json({
+      success: true,
+      message: 'Users fetched successfully',
+      data: users,
+      count: users.length,
+      statusCode: 200
+    });
 
   } catch (err) {
     console.error('Get All Users error:', err);
-    return sendResponse(res, false, 'Internal server error occurred while fetching users. Please check your network connection and try again.', null, 500);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error occurred while fetching users',
+      statusCode: 500
+    });
   }
 };
 
@@ -416,12 +593,20 @@ exports.logout = async (req, res) => {
     const { userId } = req.body;
 
     if (!userId) {
-      return sendResponse(res, false, 'User ID is required', null, 400);
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required',
+        statusCode: 400
+      });
     }
 
     const user = await User.findById(userId);
     if (!user) {
-      return sendResponse(res, false, 'User not found. Please check the user ID and try again.', null, 404);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        statusCode: 404
+      });
     }
 
     // Update user offline status
@@ -429,10 +614,18 @@ exports.logout = async (req, res) => {
     user.lastSeen = new Date();
     await user.save();
 
-    return sendResponse(res, true, 'Logged out successfully', null, 200);
+    return res.status(200).json({
+      success: true,
+      message: 'Logged out successfully',
+      statusCode: 200
+    });
 
   } catch (err) {
     console.error('Logout error:', err);
-    return sendResponse(res, false, 'Internal server error occurred during logout. Please check your network connection and try again.', null, 500);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error occurred during logout',
+      statusCode: 500
+    });
   }
 };

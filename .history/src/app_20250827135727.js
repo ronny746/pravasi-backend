@@ -11,7 +11,7 @@ const mongoose = require('mongoose');
 
 // Routes & Socket Handler
 const authRoutes = require('./routes/auth.routes');
-const dashboardRoutes = require('./routes/dashboard.routes');
+const dashboardRoutes = require('./src/routes/dashboard.routes');
 
 const chatRoutes = require('./routes/chatRoutes');
 
@@ -97,7 +97,6 @@ const uploadSingle = upload.single('image');
 // ✅ Routes
 // ======================
 app.use('/api/auth', authRoutes);
-app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/chat', chatRoutes);
 
 // Image upload route
