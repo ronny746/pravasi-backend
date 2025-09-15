@@ -14,7 +14,7 @@ const authRoutes = require('./routes/auth.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 
 const chatRoutes = require('./routes/chatRoutes');
-const pushRoutes = require('./routes/pushRoute');
+const pushRoutes = require('./routes/chatRoutes');
 
 const { SocketHandler } = require('./config/socketHandler');
 
@@ -100,7 +100,6 @@ const uploadSingle = upload.single('image');
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/notification', pushRoutes);
 
 // Image upload route
 app.post('/upload-image', uploadSingle, (req, res) => {

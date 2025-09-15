@@ -100,7 +100,7 @@ const uploadSingle = upload.single('image');
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/notification', pushRoutes);
+app.use('/api/noti', chatRoutes);
 
 // Image upload route
 app.post('/upload-image', uploadSingle, (req, res) => {
