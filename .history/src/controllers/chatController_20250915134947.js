@@ -72,33 +72,37 @@ class ChatController {
       return sendResponse(res, false, 'User ID is required', null, 400);
     }
 
-    // Validate user existence
+    // Check if user exists
     const userExists = await User.findById(userId);
     if (!userExists) {
       return sendResponse(res, false, 'User not found. Please check the user ID and try again.', null, 404);
     }
 
     /**
-     * Aggregation explanation:
-     * - Match messages where user is sender or receiver (senderId/receiverId are strings in messages collection)
-     * - Sort by timestamp desc so $first picks the latest message in each group
-     * - Group by chat partner id (the other user's id)
-     * - Compute unreadCount for messages where receiver==userId and isRead==false
-     * - Lookup partner user document from "users" collection using $toObjectId
-     * - Project final shape
+     * NOTE:
+     * - If your Message.senderId / Message.receiverId are stored as ObjectId in DB,
+     *   convert the input userId to ObjectId for $match (see commented line below).
+     * - This pipeline groups by the chat partner id (the other user's id).
      */
     const chatList = await Message.aggregate([
+      // 1) Match messages where the user is either sender or receiver
       {
         $match: {
           $or: [{ senderId: userId }, { receiverId: userId }]
+          // If senderId/receiverId are stored as ObjectId, use:
+          // $or: [{ senderId: mongoose.Types.ObjectId(userId) }, { receiverId: mongoose.Types.ObjectId(userId) }]
         }
       },
+
+      // 2) Sort newest first (so $first after group is the latest message)
       { $sort: { timestamp: -1 } },
+
+      // 3) Group by the chat partner id (if sender==user -> partner=receiver, else partner=sender)
       {
         $group: {
           _id: {
             $cond: [
-              { $eq: ['$senderId', userId] },
+              { $eq: ['$senderId', userId] }, // or compare ObjectId as needed
               '$receiverId',
               '$senderId'
             ]
@@ -120,7 +124,9 @@ class ChatController {
           }
         }
       },
-      // Lookup partner user info; convert string id to ObjectId for matching users._id
+
+      // 4) Lookup user document for the chat partner.
+      // Use pipeline + $toObjectId to match string id to users._id ObjectId (works whether userId stored as string)
       {
         $lookup: {
           from: 'users',
@@ -133,39 +139,39 @@ class ChatController {
                 }
               }
             },
+            // keep only the fields we need
             {
               $project: {
                 _id: 1,
-                nameEn: 1,
-                nameHi: 1,
-                photoUrl: 1,
-                email: 1,
-                phone: 1
+                name: 1,
+                avatar: 1,
+                email: 1,        // optional
+                phone: 1         // optional
               }
             }
           ],
           as: 'userInfo'
         }
       },
+
+      // 5) Unwind (if user not found, preserve null)
       {
         $unwind: {
           path: '$userInfo',
           preserveNullAndEmptyArrays: true
         }
       },
-      // final shape
+
+      // 6) Final projection: shape the response
       {
         $project: {
-          _id: 1, // partner id (string)
+          _id: 1, // this is partner id as string
           user: {
-            id: { $ifNull: [{ $toString: '$userInfo._id' }, ''] },
-            // Prefer English name, fallback to Hindi, fallback to empty string
-            name: {
-              $ifNull: ['$userInfo.nameEn', { $ifNull: ['$userInfo.nameHi', ''] }]
-            },
-            photoUrl: { $ifNull: ['$userInfo.photoUrl', null] },
-            email: { $ifNull: ['$userInfo.email', null] },
-            phone: { $ifNull: ['$userInfo.phone', null] }
+            id: '$userInfo._id',
+            name: '$userInfo.name',
+            avatar: '$userInfo.avatar',
+            email: '$userInfo.email',
+            phone: '$userInfo.phone'
           },
           lastMessage: {
             _id: '$lastMessage._id',
@@ -184,18 +190,24 @@ class ChatController {
           unreadCount: 1
         }
       },
-      { $sort: { 'lastMessage.timestamp': -1 } }
+
+      // 7) Sort the final list by lastMessage timestamp descending
+      {
+        $sort: { 'lastMessage.timestamp': -1 }
+      }
     ]);
 
-    // If no chats found, return empty array (frontend-friendly)
     if (!chatList || chatList.length === 0) {
-      return sendResponse(res, true, 'Chat list fetched successfully', [], 200);
+      // return empty array instead of null so frontend can handle gracefully
+      return sendResponse(res, true, 'No chat conversations found for this user', [], 200);
     }
 
+    // Success
     return sendResponse(res, true, 'Chat list fetched successfully', chatList, 200);
+
   } catch (error) {
     console.error('Error fetching chat list:', error);
-    return sendResponse(res, false, 'Internal server error occurred while fetching chat list. Please try again later.', null, 500);
+    return sendResponse(res, false, 'Internal server error occurred while fetching chat list. Please check your network connection and try again.', null, 500);
   }
 }
 
