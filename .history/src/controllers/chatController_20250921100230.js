@@ -129,7 +129,7 @@ class ChatController {
                 $project: {
                   _id: 1,
                   name: { $ifNull: ['$nameEn', { $ifNull: ['$nameHi', ''] }] },
-                  nameHi: 1,
+                  hindiName: 1,
                   photoUrl: 1,
                   email: 1,
                   phone: 1,
@@ -151,7 +151,7 @@ class ChatController {
                 {
                   userId: { $toString: '$userInfo._id' },
                   name: '$userInfo.name',
-                  hindiName:'$userInfo.nameHi',
+                  hindiName
                   photoUrl: '$userInfo.photoUrl',
                   email: '$userInfo.email',
                   phone: '$userInfo.phone',

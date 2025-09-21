@@ -151,7 +151,7 @@ class ChatController {
                 {
                   userId: { $toString: '$userInfo._id' },
                   name: '$userInfo.name',
-                  hindiName:'$userInfo.nameHi',
+                  hindiName:'$userInfo',
                   photoUrl: '$userInfo.photoUrl',
                   email: '$userInfo.email',
                   phone: '$userInfo.phone',
