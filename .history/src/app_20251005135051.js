@@ -108,6 +108,7 @@ app.use('/api/admin', adminRoutes);
 
 
 
+app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
 
 // Image upload route

@@ -16,7 +16,7 @@ const dashboardRoutes = require('./routes/dashboard.routes');
 const chatRoutes = require('./routes/chatRoutes');
 const pushRoutes = require('./routes/pushRoute');
 const paymentRoutes = require('./routes/payment.routes');
-const adminRoutes = require('./routes/admin-routes');
+const adminRoutes = require('./routes/admin');
 
 const { SocketHandler } = require('./config/socketHandler');
 
@@ -105,8 +105,6 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/notification', pushRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/admin', adminRoutes);
-
-
 
 
 

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visitor Management System</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        import React, { useState, useRef } from 'react';
+import { Camera, UserCheck, FileText, Download, Home, Clock, Phone, MapPin, User } from 'lucide-react';
+
+export default function VisitorManagementSystem() {
+  const [currentView, setCurrentView] = useState('home');
+  const [formData, setFormData] = useState({
+    visitorName: '',
+    visitorPhone: '',
+    visitorAddress: '',
+    meetingPerson: '',
+    reason: '',
+    photo: null
+  });
+  const [visitors, setVisitors] = useState([]);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [cameraActive, setCameraActive] = useState(false);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user' } 
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setCameraActive(true);
+      }
+    } catch (err) {
+      alert('Camera access denied. Please allow camera permission.');
+    }
+  };
+
+  const capturePhoto = () => {
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    
+    if (canvas && video) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+      const photoData = canvas.toDataURL('image/jpeg');
+      
+      setFormData({ ...formData, photo: photoData });
+      stopCamera();
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+      setCameraActive(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const generatePDF = () => {
+    const visitor = {
+      ...formData,
+      timestamp: new Date().toLocaleString('hi-IN'),
+      id: Date.now()
+    };
+    
+    setVisitors([...visitors, visitor]);
+    
+    const pdfWindow = window.open('', '_blank');
+    pdfWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Visitor Pass - ${visitor.visitorName}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          .pass {
+            border: 3px solid #2563eb;
+            padding: 30px;
+            border-radius: 10px;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .header h1 {
+            color: #2563eb;
+            margin: 0;
+          }
+          .content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+          }
+          .info-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+          }
+          .info-row {
+            display: flex;
+            padding: 10px;
+            background: #f3f4f6;
+            border-radius: 5px;
+          }
+          .label {
+            font-weight: bold;
+            width: 150px;
+            color: #374151;
+          }
+          .value {
+            color: #1f2937;
+          }
+          .photo-section {
+            text-align: center;
+          }
+          .photo {
+            width: 200px;
+            height: 200px;
+            object-fit: cover;
+            border: 2px solid #2563eb;
+            border-radius: 10px;
+          }
+          .signature-section {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            text-align: center;
+          }
+          .signature-line {
+            width: 300px;
+            border-top: 2px solid #000;
+            margin: 50px auto 10px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+          }
+          @media print {
+            body { padding: 20px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="pass">
+          <div class="header">
+            <h1>🏢 VISITOR PASS</h1>
+            <p style="color: #6b7280; margin: 10px 0 0 0;">Entry Authorization</p>
+          </div>
+          
+          <div class="content">
+            <div class="info-section">
+              <div class="info-row">
+                <span class="label">विज़िटर का नाम:</span>
+                <span class="value">${visitor.visitorName}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">फ़ोन नंबर:</span>
+                <span class="value">${visitor.visitorPhone}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">पता:</span>
+                <span class="value">${visitor.visitorAddress}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">किससे मिलना है:</span>
+                <span class="value">${visitor.meetingPerson}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">मिलने का कारण:</span>
+                <span class="value">${visitor.reason}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">समय:</span>
+                <span class="value">${visitor.timestamp}</span>
+              </div>
+            </div>
+            
+            <div class="photo-section">
+              <p style="font-weight: bold; margin-bottom: 10px;">फोटो</p>
+              <img src="${visitor.photo}" class="photo" alt="Visitor Photo"/>
+            </div>
+          </div>
+          
+          <div class="signature-section">
+            <div class="signature-line"></div>
+            <p><strong>सिक्योरिटी गार्ड का हस्ताक्षर</strong></p>
+            <p style="color: #6b7280; font-size: 14px; margin-top: 5px;">Security Guard Signature</p>
+          </div>
+          
+          <div class="footer">
+            <p><strong>⚠️ यह पास कंपनी परिसर में प्रवेश के लिए मान्य है</strong></p>
+            <p>This pass is valid for entry into company premises</p>
+          </div>
+        </div>
+        
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 500);
+          }
+        </script>
+      </body>
+      </html>
+    `);
+    pdfWindow.document.close();
+
+    setFormData({
+      visitorName: '',
+      visitorPhone: '',
+      visitorAddress: '',
+      meetingPerson: '',
+      reason: '',
+      photo: null
+    });
+    setCurrentView('home');
+    alert('Visitor pass generated successfully!');
+  };
+
+  const handleSubmit = () => {
+    if (!formData.photo) {
+      alert('कृपया फोटो लें! Please capture photo!');
+      return;
+    }
+    
+    if (!formData.visitorName || !formData.visitorPhone || !formData.meetingPerson) {
+      alert('कृपया सभी आवश्यक जानकारी भरें! Please fill all required fields!');
+      return;
+    }
+    
+    generatePDF();
+  };
+
+  if (currentView === 'home') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8 text-white text-center">
+              <div className="inline-block p-4 bg-white/20 rounded-full mb-4">
+                <UserCheck size={48} />
+              </div>
+              <h1 className="text-4xl font-bold mb-2">विज़िटर मैनेजमेंट सिस्टम</h1>
+              <p className="text-xl opacity-90">Visitor Management System</p>
+            </div>
+            
+            <div className="p-12">
+              <div className="grid md:grid-cols-2 gap-6 mb-8">
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border-2 border-blue-200">
+                  <div className="flex items-center mb-3">
+                    <Clock className="text-blue-600 mr-3" size={24} />
+                    <h3 className="font-semibold text-lg">आज के विज़िटर</h3>
+                  </div>
+                  <p className="text-3xl font-bold text-blue-600">{visitors.length}</p>
+                </div>
+                
+                <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border-2 border-green-200">
+                  <div className="flex items-center mb-3">
+                    <FileText className="text-green-600 mr-3" size={24} />
+                    <h3 className="font-semibold text-lg">पास जारी किए गए</h3>
+                  </div>
+                  <p className="text-3xl font-bold text-green-600">{visitors.length}</p>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => setCurrentView('form')}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-6 px-8 rounded-xl text-xl shadow-lg transform transition hover:scale-105 flex items-center justify-center gap-3"
+              >
+                <UserCheck size={28} />
+                नया विज़िटर रजिस्टर करें / Register New Visitor
+              </button>
+              
+              {visitors.length > 0 && (
+                <div className="mt-8">
+                  <h2 className="text-2xl font-bold mb-4 text-gray-800">आज के विज़िटर</h2>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {visitors.map((v) => (
+                      <div key={v.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <img src={v.photo} alt={v.visitorName} className="w-16 h-16 rounded-full object-cover border-2 border-blue-500" />
+                          <div>
+                            <p className="font-bold text-lg">{v.visitorName}</p>
+                            <p className="text-sm text-gray-600">To meet: {v.meetingPerson}</p>
+                            <p className="text-xs text-gray-500">{v.timestamp}</p>
+                          </div>
+                        </div>
+                        <User className="text-blue-600" size={24} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText size={32} />
+              <h1 className="text-2xl font-bold">विज़िटर रजिस्ट्रेशन फॉर्म</h1>
+            </div>
+            <button
+              onClick={() => {
+                stopCamera();
+                setCurrentView('home');
+              }}
+              className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg flex items-center gap-2 transition"
+            >
+              <Home size={20} />
+              होम
+            </button>
+          </div>
+          
+          <div className="p-8">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="flex items-center gap-2 text-gray-700 font-semibold mb-2">
+                  <User size={20} className="text-blue-600" />
+                  विज़िटर का नाम *
+                </label>
+                <input
+                  type="text"
+                  name="visitorName"
+                  value={formData.visitorName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="पूरा नाम लिखें"
+                />
+              </div>
+              
+              <div>
+                <label className="flex items-center gap-2 text-gray-700 font-semibold mb-2">
+                  <Phone size={20} className="text-blue-600" />
+                  फ़ोन नंबर *
+                </label>
+                <input
+                  type="tel"
+                  name="visitorPhone"
+                  value={formData.visitorPhone}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="10 अंकों का नंबर"
+                />
+              </div>
+              
+              <div className="md:col-span-2">
+                <label className="flex items-center gap-2 text-gray-700 font-semibold mb-2">
+                  <MapPin size={20} className="text-blue-600" />
+                  पता
+                </label>
+                <input
+                  type="text"
+                  name="visitorAddress"
+                  value={formData.visitorAddress}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="पूरा पता लिखें"
+                />
+              </div>
+              
+              <div>
+                <label className="flex items-center gap-2 text-gray-700 font-semibold mb-2">
+                  <UserCheck size={20} className="text-blue-600" />
+                  किससे मिलना है *
+                </label>
+                <input
+                  type="text"
+                  name="meetingPerson"
+                  value={formData.meetingPerson}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="व्यक्ति का नाम"
+                />
+              </div>
+              
+              <div>
+                <label className="flex items-center gap-2 text-gray-700 font-semibold mb-2">
+                  <FileText size={20} className="text-blue-600" />
+                  मिलने का कारण
+                </label>
+                <input
+                  type="text"
+                  name="reason"
+                  value={formData.reason}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="कारण बताएं"
+                />
+              </div>
+            </div>
+            
+            <div className="mt-8 bg-gray-50 p-6 rounded-xl border-2 border-gray-200">
+              <label className="flex items-center gap-2 text-gray-700 font-semibold mb-4">
+                <Camera size={24} className="text-blue-600" />
+                फोटो लें * (Capture Photo)
+              </label>
+              
+              {!formData.photo && !cameraActive && (
+                <button
+                  onClick={startCamera}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition"
+                >
+                  <Camera size={24} />
+                  कैमरा चालू करें / Start Camera
+                </button>
+              )}
+              
+              {cameraActive && (
+                <div className="space-y-4">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full rounded-lg border-2 border-blue-500"
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      onClick={capturePhoto}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition"
+                    >
+                      फोटो लें / Capture
+                    </button>
+                    <button
+                      onClick={stopCamera}
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition"
+                    >
+                      बंद करें / Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {formData.photo && (
+                <div className="space-y-4">
+                  <img
+                    src={formData.photo}
+                    alt="Captured"
+                    className="w-full max-w-md mx-auto rounded-lg border-2 border-green-500"
+                  />
+                  <button
+                    onClick={() => {
+                      setFormData({ ...formData, photo: null });
+                      startCamera();
+                    }}
+                    className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg transition"
+                  >
+                    फिर से फोटो लें / Retake Photo
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            
+            <div className="mt-8 flex gap-4">
+              <button
+                onClick={() => {
+                  stopCamera();
+                  setCurrentView('home');
+                }}
+                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 px-6 rounded-lg transition"
+              >
+                रद्द करें / Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition transform hover:scale-105 shadow-lg"
+              >
+                <Download size={24} />
+                पास जारी करें / Generate Pass
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+        
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<VisitorManagementSystem />);
+    </script>
+</body>
+</html>

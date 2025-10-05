@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Visitor Management System</title>
+
+  <!-- React + ReactDOM (UMD) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel for in-browser JSX transform -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useRef, useEffect } = React;
+
+    function VisitorManagementSystem() {
+      const [currentView, setCurrentView] = useState('home');
+      const [formData, setFormData] = useState({
+        visitorName: '',
+        visitorPhone: '',
+        visitorAddress: '',
+        meetingPerson: '',
+        reason: '',
+        photo: null
+      });
+      const [visitors, setVisitors] = useState([]);
+      const videoRef = useRef(null);
+      const canvasRef = useRef(null);
+      const [cameraActive, setCameraActive] = useState(false);
+
+      // Cleanup camera on unmount
+      useEffect(() => {
+        return () => {
+          stopCamera();
+        };
+      }, []);
+
+      const startCamera = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+              facingMode: 'user',
+              width: { ideal: 640 },
+              height: { ideal: 480 }
+            }
+          });
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            await videoRef.current.play();
+            setCameraActive(true);
+          }
+        } catch (err) {
+          console.error('Camera error:', err);
+          alert('कैमरा एक्सेस नहीं मिल पाया। कृपया ब्राउज़र सेटिंग्स चेक करें।\nCamera access denied. Please check browser settings.');
+        }
+      };
+
+      const capturePhoto = () => {
+        const canvas = canvasRef.current;
+        const video = videoRef.current;
+
+        if (canvas && video && video.videoWidth > 0) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const photoData = canvas.toDataURL('image/jpeg', 0.8);
+          setFormData(prev => ({ ...prev, photo: photoData }));
+          stopCamera();
+        } else {
+          alert('कृपया कैमरा लोड होने तक प्रतीक्षा करें।\nPlease wait for camera to load.');
+        }
+      };
+
+      const stopCamera = () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+          const tracks = videoRef.current.srcObject.getTracks();
+          tracks.forEach(track => track.stop());
+          videoRef.current.srcObject = null;
+        }
+        setCameraActive(false);
+      };
+
+      const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+      };
+
+      const validateForm = () => {
+        if (!formData.visitorName.trim()) {
+          alert('कृपया विज़िटर का नाम लिखें!\nPlease enter visitor name!');
+          return false;
+        }
+        if (!formData.visitorPhone.trim() || formData.visitorPhone.length < 10) {
+          alert('कृपया सही फ़ोन नंबर लिखें (10 अंक)!\nPlease enter valid phone number (10 digits)!');
+          return false;
+        }
+        if (!formData.meetingPerson.trim()) {
+          alert('कृपया बताएं किससे मिलना है!\nPlease enter whom to meet!');
+          return false;
+        }
+        if (!formData.photo) {
+          alert('कृपया फोटो लें!\nPlease capture photo!');
+          return false;
+        }
+        return true;
+      };
+
+      const generatePDF = () => {
+        const visitor = {
+          ...formData,
+          timestamp: new Date().toLocaleString('hi-IN', {
+            dateStyle: 'medium',
+            timeStyle: 'short'
+          }),
+          id: Date.now()
+        };
+
+        setVisitors(prev => [visitor, ...prev]);
+
+        const pdfWindow = window.open('', '_blank');
+        if (!pdfWindow) {
+          alert('पॉपअप ब्लॉक हो गया! कृपया पॉपअप allow करें।\nPopup blocked! Please allow popups.');
+          return;
+        }
+
+        pdfWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>Visitor Pass - ${visitor.visitorName}</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                padding: 40px; 
+                max-width: 900px; 
+                margin: 0 auto;
+                background: #f5f5f5;
+              }
+              .pass { 
+                background: white;
+                border: 4px solid #2563eb; 
+                padding: 40px; 
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+              }
+              .header { 
+                text-align: center; 
+                border-bottom: 3px solid #2563eb; 
+                padding-bottom: 25px; 
+                margin-bottom: 40px;
+              }
+              .header h1 { 
+                color: #2563eb; 
+                margin: 0; 
+                font-size: 42px;
+                letter-spacing: 2px;
+              }
+              .header p {
+                color: #6b7280;
+                margin-top: 10px;
+                font-size: 18px;
+              }
+              .content { 
+                display: grid; 
+                grid-template-columns: 1.5fr 1fr; 
+                gap: 40px;
+                margin-bottom: 40px;
+              }
+              .info-section { 
+                display: flex; 
+                flex-direction: column; 
+                gap: 18px;
+              }
+              .info-row { 
+                display: flex;
+                align-items: center;
+                padding: 15px; 
+                background: linear-gradient(to right, #f3f4f6, #ffffff);
+                border-left: 4px solid #2563eb;
+                border-radius: 8px;
+              }
+              .label { 
+                font-weight: 700; 
+                min-width: 180px; 
+                color: #374151;
+                font-size: 16px;
+              }
+              .value { 
+                color: #1f2937;
+                font-size: 16px;
+                word-break: break-word;
+              }
+              .photo-section {
+                text-align: center;
+              }
+              .photo-section p {
+                font-weight: 700;
+                margin-bottom: 15px;
+                font-size: 18px;
+                color: #374151;
+              }
+              .photo { 
+                width: 100%;
+                max-width: 250px;
+                height: 250px; 
+                object-fit: cover; 
+                border: 4px solid #2563eb; 
+                border-radius: 15px;
+                box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
+              }
+              .signature-section { 
+                margin-top: 50px; 
+                padding-top: 30px; 
+                border-top: 3px solid #e5e7eb; 
+                text-align: center;
+              }
+              .signature-line { 
+                width: 350px; 
+                border-top: 2px solid #374151; 
+                margin: 60px auto 15px;
+              }
+              .signature-section p {
+                font-size: 16px;
+                margin: 5px 0;
+              }
+              .footer { 
+                text-align: center; 
+                margin-top: 40px; 
+                padding: 25px;
+                background: #f9fafb;
+                border-radius: 10px;
+                border: 2px solid #e5e7eb;
+              }
+              .footer p {
+                margin: 8px 0;
+                line-height: 1.6;
+              }
+              .footer p:first-child {
+                font-size: 18px;
+                font-weight: 700;
+                color: #dc2626;
+              }
+              .footer p:last-child {
+                color: #6b7280;
+                font-size: 14px;
+              }
+              @media print {
+                body { 
+                  padding: 20px;
+                  background: white;
+                }
+                .pass {
+                  box-shadow: none;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="pass">
+              <div class="header">
+                <h1>🏢 VISITOR PASS</h1>
+                <p>Entry Authorization / प्रवेश प्राधिकरण</p>
+              </div>
+
+              <div class="content">
+                <div class="info-section">
+                  <div class="info-row">
+                    <span class="label">👤 विज़िटर का नाम:</span>
+                    <span class="value">${visitor.visitorName}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="label">📞 फ़ोन नंबर:</span>
+                    <span class="value">${visitor.visitorPhone}</span>
+                  </div>
+                  ${visitor.visitorAddress ? `
+                  <div class="info-row">
+                    <span class="label">📍 पता:</span>
+                    <span class="value">${visitor.visitorAddress}</span>
+                  </div>
+                  ` : ''}
+                  <div class="info-row">
+                    <span class="label">🤝 किससे मिलना है:</span>
+                    <span class="value">${visitor.meetingPerson}</span>
+                  </div>
+                  ${visitor.reason ? `
+                  <div class="info-row">
+                    <span class="label">📝 मिलने का कारण:</span>
+                    <span class="value">${visitor.reason}</span>
+                  </div>
+                  ` : ''}
+                  <div class="info-row">
+                    <span class="label">⏰ समय:</span>
+                    <span class="value">${visitor.timestamp}</span>
+                  </div>
+                </div>
+
+                <div class="photo-section">
+                  <p>📷 फोटो / Photo</p>
+                  <img src="${visitor.photo}" class="photo" alt="Visitor Photo"/>
+                </div>
+              </div>
+
+              <div class="signature-section">
+                <div class="signature-line"></div>
+                <p><strong>सिक्योरिटी गार्ड का हस्ताक्षर</strong></p>
+                <p style="color:#6b7280; font-size:14px;">Security Guard Signature</p>
+              </div>
+
+              <div class="footer">
+                <p>⚠️ यह पास कंपनी परिसर में प्रवेश के लिए मान्य है</p>
+                <p>This pass is valid for entry into company premises</p>
+                <p style="margin-top:15px; font-size:12px;">Pass ID: #${visitor.id}</p>
+              </div>
+            </div>
+
+            <script>
+              window.onload = function() { 
+                setTimeout(function() { 
+                  window.print(); 
+                }, 800); 
+              }
+            </script>
+          </body>
+          </html>
+        `);
+        pdfWindow.document.close();
+
+        // Reset form
+        setFormData({
+          visitorName: '',
+          visitorPhone: '',
+          visitorAddress: '',
+          meetingPerson: '',
+          reason: '',
+          photo: null
+        });
+        setCurrentView('home');
+        
+        setTimeout(() => {
+          alert('✅ विज़िटर पास सफलतापूर्वक जारी किया गया!\nVisitor pass generated successfully!');
+        }, 100);
+      };
+
+      const handleSubmit = () => {
+        if (validateForm()) {
+          generatePDF();
+        }
+      };
+
+      const deleteVisitor = (id) => {
+        if (confirm('क्या आप इस विज़िटर को हटाना चाहते हैं?\nAre you sure you want to delete this visitor?')) {
+          setVisitors(prev => prev.filter(v => v.id !== id));
+        }
+      };
+
+      // Icon component
+      const Icon = ({ emoji, className = '' }) => (
+        <span className={className} style={{fontSize: '20px'}}>{emoji}</span>
+      );
+
+      if (currentView === 'home') {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 md:p-6">
+            <div className="max-w-6xl mx-auto">
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6 md:p-8 text-white text-center">
+                  <div className="inline-block p-4 bg-white/20 rounded-full mb-4 backdrop-blur-sm">
+                    <span style={{fontSize: '48px'}}>🏢</span>
+                  </div>
+                  <h1 className="text-3xl md:text-4xl font-bold mb-2">विज़िटर मैनेजमेंट सिस्टम</h1>
+                  <p className="text-lg md:text-xl opacity-90">Visitor Management System</p>
+                </div>
+
+                <div className="p-6 md:p-12">
+                  {/* Stats */}
+                  <div className="grid md:grid-cols-3 gap-4 md:gap-6 mb-8">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border-2 border-blue-200 hover:shadow-lg transition-shadow">
+                      <div className="flex items-center mb-3">
+                        <Icon emoji="👥" className="text-blue-600 mr-3" />
+                        <h3 className="font-semibold text-lg">आज के विज़िटर</h3>
+                      </div>
+                      <p className="text-4xl font-bold text-blue-600">{visitors.length}</p>
+                      <p className="text-sm text-blue-500 mt-1">Today's Visitors</p>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border-2 border-green-200 hover:shadow-lg transition-shadow">
+                      <div className="flex items-center mb-3">
+                        <Icon emoji="✅" className="text-green-600 mr-3" />
+                        <h3 className="font-semibold text-lg">पास जारी किए गए</h3>
+                      </div>
+                      <p className="text-4xl font-bold text-green-600">{visitors.length}</p>
+                      <p className="text-sm text-green-500 mt-1">Passes Issued</p>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border-2 border-purple-200 hover:shadow-lg transition-shadow">
+                      <div className="flex items-center mb-3">
+                        <Icon emoji="⏰" className="text-purple-600 mr-3" />
+                        <h3 className="font-semibold text-lg">वर्तमान समय</h3>
+                      </div>
+                      <p className="text-2xl font-bold text-purple-600">
+                        {new Date().toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                      <p className="text-sm text-purple-500 mt-1">Current Time</p>
+                    </div>
+                  </div>
+
+                  {/* Register Button */}
+                  <button
+                    onClick={() => setCurrentView('form')}
+                    className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white font-bold py-5 md:py-6 px-8 rounded-xl text-lg md:text-xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+                  >
+                    <Icon emoji="➕" />
+                    नया विज़िटर रजिस्टर करें / Register New Visitor
+                  </button>
+
+                  {/* Visitors List */}
+                  {visitors.length > 0 && (
+                    <div className="mt-8">
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                          <Icon emoji="📋" /> आज के विज़िटर ({visitors.length})
+                        </h2>
+                      </div>
+                      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                        {visitors.map((v) => (
+                          <div key={v.id} className="bg-gradient-to-r from-gray-50 to-white p-4 rounded-lg border-2 border-gray-200 hover:border-blue-300 hover:shadow-md transition-all">
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-4 flex-1 min-w-0">
+                                <img 
+                                  src={v.photo} 
+                                  alt={v.visitorName} 
+                                  className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border-4 border-blue-500 shadow-md flex-shrink-0" 
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-bold text-lg md:text-xl text-gray-800 truncate">{v.visitorName}</p>
+                                  <p className="text-sm text-gray-600 flex items-center gap-1 truncate">
+                                    <Icon emoji="🤝" /> {v.meetingPerson}
+                                  </p>
+                                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                                    <Icon emoji="⏰" /> {v.timestamp}
+                                  </p>
+                                  <p className="text-xs text-blue-600 flex items-center gap-1">
+                                    <Icon emoji="📞" /> {v.visitorPhone}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => deleteVisitor(v.id)}
+                                className="bg-red-100 hover:bg-red-200 text-red-600 p-2 rounded-lg transition flex-shrink-0"
+                                title="Delete visitor"
+                              >
+                                <Icon emoji="🗑️" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {visitors.length === 0 && (
+                    <div className="mt-12 text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                      <span style={{fontSize: '64px'}}>📭</span>
+                      <p className="text-xl text-gray-600 mt-4">अभी तक कोई विज़िटर नहीं</p>
+                      <p className="text-gray-500">No visitors registered yet</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // Form View
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 md:p-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-4 md:p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <Icon emoji="📝" />
+                    <h1 className="text-xl md:text-2xl font-bold">विज़िटर रजिस्ट्रेशन फॉर्म</h1>
+                  </div>
+                  <button
+                    onClick={() => { 
+                      stopCamera(); 
+                      setCurrentView('home'); 
+                    }}
+                    className="bg-white/20 hover:bg-white/30 px-3 md:px-4 py-2 rounded-lg flex items-center gap-2 transition backdrop-blur-sm"
+                  >
+                    <Icon emoji="🏠" /> <span className="hidden md:inline">होम</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 md:p-8">
+                {/* Form Fields */}
+                <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+                  <div>
+                    <label className="flex items-center gap-2 text-gray-700 font-semibold mb-2">
+                      <Icon emoji="👤" /> विज़िटर का नाम <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="visitorName"
+                      value={formData.visitorName}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition"
+                      placeholder="पूरा नाम लिखें"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 text-gray-700 font-semibold mb-2">
+                      <Icon emoji="📞" /> फ़ोन नंबर <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      name="visitorPhone"
+                      value={formData.visitorPhone}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition"
+                      placeholder="10 अंकों का नंबर"
+                      maxLength="10"
+                      pattern="[0-9]{10}"
+                      required
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="flex items-center gap-2 text-gray-700 font-semibold mb-2">
+                      <Icon emoji="📍" /> पता
+                    </label>
+                    <input
+                      type="text"
+                      name="visitorAddress"
+                      value={formData.visitorAddress}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition"
+                      placeholder="पूरा पता लिखें (Optional)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 text-gray-700 font-semibold mb-2">
+                      <Icon emoji="🤝" /> किससे मिलना है <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="meetingPerson"
+                      value={formData.meetingPerson}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition"
+                      placeholder="व्यक्ति का नाम"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 text-gray-700 font-semibold mb-2">
+                      <Icon emoji="📝" /> मिलने का कारण
+                    </label>
+                    <input
+                      type="text"
+                      name="reason"
+                      value={formData.reason}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition"
+                      placeholder="कारण बताएं (Optional)"
+                    />
+                  </div>
+                </div>
+
+                {/* Camera Section */}
+                <div className="mt-6 md:mt-8 bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6 rounded-xl border-2 border-gray-300">
+                  <label className="flex items-center gap-2 text-gray-700 font-semibold mb-4">
+                    <Icon emoji="📷" /> फोटो लें <span className="text-red-500">*</span>
+                    <span className="text-sm font-normal text-gray-500">(Capture Photo)</span>
+                  </label>
+
+                  {!formData.photo && !cameraActive && (
+                    <button
+                      onClick={startCamera}
+                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                    >
+                      <Icon emoji="📷" /> कैमरा चालू करें / Start Camera
+                    </button>
+                  )}
+
+                  {cameraActive && (
+                    <div className="space-y-4">
+                      <div className="relative bg-black rounded-lg overflow-hidden">
+                        <video 
+                          ref={videoRef} 
+                          autoPlay 
+                          playsInline 
+                          muted
+                          className="w-full rounded-lg"
+                          style={{ maxHeight: '400px' }}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button 
+                          onClick={capturePhoto} 
+                          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-3 px-6 rounded-lg transition transform hover:scale-[1.02] active:scale-[0.98] shadow-lg flex items-center justify-center gap-2"
+                        >
+                          <Icon emoji="📸" /> फोटो लें
+                        </button>
+                        <button 
+                          onClick={stopCamera} 
+                          className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold py-3 px-6 rounded-lg transition transform hover:scale-[1.02] active:scale-[0.98] shadow-lg flex items-center justify-center gap-2"
+                        >
+                          <Icon emoji="❌" /> बंद करें
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.photo && (
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <img 
+                          src={formData.photo} 
+                          alt="Captured" 
+                          className="w-full max-w-md mx-auto rounded-lg border-4 border-green-500 shadow-lg" 
+                        />
+                        <div className="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
+                          <Icon emoji="✅" /> Captured
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => { 
+                          setFormData(prev => ({ ...prev, photo: null })); 
+                          startCamera(); 
+                        }}
+                        className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-bold py-3 px-6 rounded-lg transition transform hover:scale-[1.02] active:scale-[0.98] shadow-lg flex items-center justify-center gap-2"
+                      >
+                        <Icon emoji="🔄" /> फिर से फोटो लें / Retake Photo
+                      </button>

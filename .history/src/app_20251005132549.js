@@ -108,8 +108,6 @@ app.use('/api/admin', adminRoutes);
 
 
 
-
-
 // Image upload route
 app.post('/upload-image', uploadSingle, (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
