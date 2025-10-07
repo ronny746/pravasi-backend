@@ -17,6 +17,8 @@ const chatRoutes = require('./routes/chatRoutes');
 const pushRoutes = require('./routes/pushRoute');
 const paymentRoutes = require('./routes/payment.routes');
 const adminRoutes = require('./routes/admin-routes');
+const audioRoutes = require('./routes/audio-route');
+
 
 const { SocketHandler } = require('./config/socketHandler');
 
@@ -60,6 +62,8 @@ connectDB();
 // ✅ Images Directory
 // ======================
 const imagesDir = path.join(__dirname, 'images');
+app.use('/media', express.static(path.join(__dirname, 'media')));
+
 if (!fs.existsSync(imagesDir)) {
   fs.mkdirSync(imagesDir, { recursive: true });
   console.log('✅ Images directory created:', imagesDir);
@@ -67,6 +71,8 @@ if (!fs.existsSync(imagesDir)) {
 
 // Serve static images
 app.use('/images', express.static(imagesDir));
+app.use('/media', express.static(path.join(__dirname, 'media')));
+
 
 // ======================
 // ✅ Multer Configuration
@@ -105,6 +111,9 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/notification', pushRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/audio', audioRoutes);
+
+
 
 
 
