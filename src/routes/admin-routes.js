@@ -52,6 +52,7 @@ router.delete('/media-blogs/:id', adminController.deleteMediaBlog);
 // ============================================
 // CONTACT MESSAGES ROUTES
 // ============================================
+router.post('/contact-messages', adminController.createContactMessage);
 router.get('/contact-messages', adminController.getAllContactMessages);
 router.get('/contact-messages/:id', adminController.getContactMessageById);
 router.delete('/contact-messages/:id', adminController.deleteContactMessage);
