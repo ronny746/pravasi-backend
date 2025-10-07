@@ -31,6 +31,7 @@ const server = http.createServer(app);
 const allowedOrigins = [
   "http://localhost:5173",
   "http://31.97.231.85",
+  "https://your-production-site.com"
 ];
 
 const io = socketIo(server, {
