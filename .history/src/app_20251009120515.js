@@ -29,7 +29,6 @@ const server = http.createServer(app);
 // ✅ Socket.IO setup
 // ======================
 const allowedOrigins = [
-  "https://pravasi-one.vercel.app",
   "http://localhost:5173",
   "http://31.97.231.85:2700",
 ];
@@ -53,20 +52,7 @@ const io = socketIo(server, {
 // ======================
 // ✅ Middleware
 // ======================
-app.use(cors({
-  origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps, curl, Postman)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      return callback(new Error("Not allowed by CORS"));
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 
 // ======================

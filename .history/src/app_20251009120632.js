@@ -29,7 +29,7 @@ const server = http.createServer(app);
 // ✅ Socket.IO setup
 // ======================
 const allowedOrigins = [
-  "https://pravasi-one.vercel.app",
+  
   "http://localhost:5173",
   "http://31.97.231.85:2700",
 ];

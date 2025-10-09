@@ -29,30 +29,10 @@ const server = http.createServer(app);
 // ✅ Socket.IO setup
 // ======================
 const allowedOrigins = [
-  "https://pravasi-one.vercel.app",
   "http://localhost:5173",
   "http://31.97.231.85:2700",
 ];
 
-const io = socketIo(server, {
-  cors: {
-    origin: function(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type"],
-    credentials: true
-  }
-});
-
-
-// ======================
-// ✅ Middleware
-// ======================
 app.use(cors({
   origin: function (origin, callback) {
     // allow requests with no origin (like mobile apps, curl, Postman)
