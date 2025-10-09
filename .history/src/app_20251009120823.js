@@ -28,14 +28,26 @@ const server = http.createServer(app);
 // ======================
 // ✅ Socket.IO setup
 // ======================
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://31.97.231.85",
+];
+
 const io = socketIo(server, {
   cors: {
-    origin: "*",
+    origin: function(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"],
     credentials: true
   }
 });
+
 
 // ======================
 // ✅ Middleware
