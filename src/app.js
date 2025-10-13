@@ -17,7 +17,9 @@ const chatRoutes = require('./routes/chatRoutes');
 const pushRoutes = require('./routes/pushRoute');
 const paymentRoutes = require('./routes/payment.routes');
 const adminRoutes = require('./routes/admin-routes');
-const audioRoutes = require('./routes/audio-route');
+// const audioRoutes = require('./routes/audio-route');
+const locationRoutes = require('./routes/location.routes');
+
 
 
 const { SocketHandler } = require('./config/socketHandler');
@@ -124,7 +126,8 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/notification', pushRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/audio', audioRoutes);
+// app.use('/audio', audioRoutes);
+app.use('/api/location', locationRoutes);
 
 
 
