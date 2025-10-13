@@ -11,18 +11,9 @@ const GalleryItem = require('../models/GalleryItem');
 const News = require('../models/News');
 const fs = require('fs');
 const path = require('path');
-const User = require('../models/user.model');
-
 
 // Helper function to delete file safely
-const sendResponse = (res, success, message, data = null, statusCode = 200) => {
-  return res.status(200).json({
-    success,
-    message,
-    data,
-    statusCode
-  });
-};
+
 // VERIFY USER (by userId)
 exports.verifyUser = async (req, res) => {
   try {

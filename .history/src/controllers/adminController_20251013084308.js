@@ -11,64 +11,9 @@ const GalleryItem = require('../models/GalleryItem');
 const News = require('../models/News');
 const fs = require('fs');
 const path = require('path');
-const User = require('../models/user.model');
-
 
 // Helper function to delete file safely
-const sendResponse = (res, success, message, data = null, statusCode = 200) => {
-  return res.status(200).json({
-    success,
-    message,
-    data,
-    statusCode
-  });
-};
-// VERIFY USER (by userId)
-exports.verifyUser = async (req, res) => {
-  try {
-    const { userId } = req.params;
 
-    // Check required param
-    if (!userId) {
-      return sendResponse(res, false, 'User ID is required', null, 400);
-    }
-
-    // Find user
-    const user = await User.findById(userId);
-    if (!user) {
-      return sendResponse(res, false, 'User not found. Please check and try again.', null, 404);
-    }
-
-    // Update verification fields
-    user.isVerified = true;
-    user.phoneVerified = true;  // optional — depends on your flow
-    user.emailVerified = true;  // optional
-    await user.save();
-
-    return sendResponse(
-      res,
-      true,
-      'User verified successfully',
-      {
-        userId: user._id,
-        isVerified: user.isVerified,
-        phoneVerified: user.phoneVerified,
-        emailVerified: user.emailVerified
-      },
-      200
-    );
-
-  } catch (err) {
-    console.error('Verify User error:', err);
-    return sendResponse(
-      res,
-      false,
-      'Internal server error occurred while verifying user. Please try again.',
-      null,
-      500
-    );
-  }
-};
 
 
 const deleteFile = (filePath) => {

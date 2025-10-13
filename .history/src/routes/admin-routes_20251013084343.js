@@ -5,7 +5,6 @@ const { uploadSingle, handleMulterErrors } = require('../config/multer.config');
 // ============================================
 // HERO SLIDES ROUTES
 // ============================================
-router.put('/verify/:userId', adminController.verifyUser);
 
 router.post('/hero-slides', uploadSingle, handleMulterErrors, adminController.createHeroSlide);
 router.get('/hero-slides', adminController.getAllHeroSlides);
