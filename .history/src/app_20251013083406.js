@@ -30,7 +30,7 @@ const server = http.createServer(app);
 // ======================
 const allowedOrigins = [
   "http://localhost:5173",
-  "http://localhost:4000",
+  "http://localhost:5173",
   "http://31.97.231.85",
 ];
 

@@ -2,6 +2,7 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
+const https = require('https');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
@@ -12,49 +13,99 @@ const mongoose = require('mongoose');
 // Routes & Socket Handler
 const authRoutes = require('./routes/auth.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
-
 const chatRoutes = require('./routes/chatRoutes');
 const pushRoutes = require('./routes/pushRoute');
 const paymentRoutes = require('./routes/payment.routes');
 const adminRoutes = require('./routes/admin-routes');
 const audioRoutes = require('./routes/audio-route');
 
-
 const { SocketHandler } = require('./config/socketHandler');
 
 const app = express();
-const server = http.createServer(app);
 
 // ======================
-// ✅ Socket.IO setup
+// ✅ HTTPS Configuration (SSL Certificate ke liye)
+// ======================
+let server;
+const useHTTPS = process.env.USE_HTTPS === 'true';
+
+if (useHTTPS) {
+  // SSL certificate files (Let's Encrypt se generate karein)
+  const sslOptions = {
+    key: fs.readFileSync(process.env.SSL_KEY_PATH || '/etc/letsencrypt/live/yourdomain.com/privkey.pem'),
+    cert: fs.readFileSync(process.env.SSL_CERT_PATH || '/etc/letsencrypt/live/yourdomain.com/fullchain.pem')
+  };
+  server = https.createServer(sslOptions, app);
+  console.log('✅ HTTPS Server enabled');
+} else {
+  server = http.createServer(app);
+  console.log('⚠️  HTTP Server (Use HTTPS for production)');
+}
+
+// ======================
+// ✅ Socket.IO setup with Enhanced CORS
 // ======================
 const allowedOrigins = [
   "http://localhost:5173",
-  "http://localhost:4000",
+  "https://pravasi-one.vercel.app",
   "http://31.97.231.85",
+  "https://31.97.231.85"
 ];
 
 const io = socketIo(server, {
   cors: {
     origin: function(origin, callback) {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.log('❌ CORS blocked origin:', origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     credentials: true
   }
 });
 
+// ======================
+// ✅ Enhanced CORS Middleware for Express
+// ======================
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
+
+// Preflight requests ke liye
+app.options('*', cors());
+
+app.use(express.json());
 
 // ======================
-// ✅ Middleware
+// ✅ Security Headers
 // ======================
-app.use(cors());
-app.use(express.json());
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  // HTTPS redirect (agar HTTP request aaye)
+  if (useHTTPS && req.headers['x-forwarded-proto'] !== 'https' && process.env.NODE_ENV === 'production') {
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
+  }
+  
+  next();
+});
 
 // ======================
 // ✅ MongoDB Connection
@@ -85,7 +136,6 @@ if (!fs.existsSync(imagesDir)) {
 // Serve static images
 app.use('/images', express.static(imagesDir));
 app.use('/media', express.static(path.join(__dirname, 'media')));
-
 
 // ======================
 // ✅ Multer Configuration
@@ -125,12 +175,6 @@ app.use('/api/notification', pushRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/audio', audioRoutes);
-
-
-
-
-
-
 
 // Image upload route
 app.post('/upload-image', uploadSingle, (req, res) => {
@@ -182,7 +226,9 @@ app.get('/health', (req, res) => {
     message: 'Pravasi Chat Server is healthy',
     timestamp: new Date(),
     uptime: process.uptime(),
-    connectedUsers: SocketHandler?.getConnectedUsersCount() || 0
+    connectedUsers: SocketHandler?.getConnectedUsersCount() || 0,
+    protocol: req.protocol,
+    secure: req.secure
   });
 });
 
@@ -228,6 +274,17 @@ app.use((err, req, res, next) => {
 
   console.error('❌ Unhandled error:', err);
   res.status(500).json({ success: false, message: 'Internal server error' });
+});
+
+// ======================
+// ✅ 404 Handler
+// ======================
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+    path: req.path
+  });
 });
 
 // ======================
