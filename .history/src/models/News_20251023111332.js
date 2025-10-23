@@ -4,6 +4,6 @@ title: String,
 about: String,
 image: String,
 date: Date,
-category: { type: String, enum: ['CRIME','DONATION','GENERAL'], default: 'GENERAL' }
+category: { type: String, enum: ['CRIME','donation','general'], default: 'general' }
 }, { timestamps: true });
 module.exports = mongoose.model('News', NewsSchema);
