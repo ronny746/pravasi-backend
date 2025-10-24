@@ -41,6 +41,15 @@ router.put('/events/:id', uploadSingle, handleMulterErrors, adminController.upda
 router.delete('/events/:id', adminController.deleteEvent);
 
 // ============================================
+// BUSINESS ROUTES 
+// ============================================ 
+router.post('/businesses', uploadSingle, handleMulterErrors, adminController.createBusiness);
+router.get('/businesses', adminController.getAllBusiness);
+router.get('/businesses/:id', adminController.getBusinessById);
+router.put('/businesses/:id', uploadSingle, handleMulterErrors, adminController.updateBusiness);
+router.delete('/businesses/:id', adminController.deleteBusiness);
+
+// ============================================
 // MEDIA BLOGS ROUTES
 // ============================================
 router.post('/media-blogs', uploadSingle, handleMulterErrors, adminController.createMediaBlog);

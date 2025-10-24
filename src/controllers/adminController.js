@@ -2,6 +2,7 @@ const HeroSlide = require('../models/HeroSlide');
 const MissionCard = require('../models/MissionCard');
 const Person = require('../models/Person');
 const Event = require('../models/Event');
+const BusinessFeature = require('../models/BusinessFeature');
 const MediaBlog = require('../models/MediaBlog');
 const ContactMessage = require('../models/ContactMessage');
 const FAQ = require('../models/FAQ');
@@ -729,6 +730,170 @@ exports.deleteEvent = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error deleting event',
+      error: error.message,
+      statusCode: 500
+    });
+  }
+};
+
+
+// ============================================
+// BUSINESS CRUD
+// ============================================
+
+exports.createBusiness = async (req, res) => {
+  try {
+    const { title, subtitle, about, place } = req.body;
+    const image = getImagePath(req.file);
+
+    const business = new BusinessFeature({
+      title,
+      subtitle,
+      about,
+      place,
+      image,
+    });
+
+    await business.save();
+
+    return res.status(201).json({
+      success: true,
+      message: 'Business created successfully',
+      data: business,
+      statusCode: 201
+    });
+  } catch (error) {
+    if (req.file) deleteFile(`/images/${req.file.filename}`);
+    return res.status(500).json({
+      success: false,
+      message: 'Error creating business',
+      error: error.message,
+      statusCode: 500
+    });
+  }
+};
+
+exports.getAllBusiness = async (req, res) => {
+  try {
+    const business = await BusinessFeature.find().sort({ date: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: business.length,
+      data: business,
+      statusCode: 200
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching business',
+      error: error.message,
+      statusCode: 500
+    });
+  }
+};
+
+exports.getBusinessById = async (req, res) => {
+  try {
+    const business = await BusinessFeature.findById(req.params.id);
+
+    if (!business) {
+      return res.status(404).json({
+        success: false,
+        message: 'Business not found',
+        statusCode: 404
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: business,
+      statusCode: 200
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching business',
+      error: error.message,
+      statusCode: 500
+    });
+  }
+};
+
+exports.updateBusiness = async (req, res) => {
+  try {
+    const { title, subtitle, about, place } = req.body;
+    const updateData = {};
+    if (typeof title !== 'undefined') updateData.title = title;
+    if (typeof subtitle !== 'undefined') updateData.subtitle = subtitle;
+    if (typeof about !== 'undefined') updateData.about = about;
+    if (typeof place !== 'undefined') updateData.place = place;
+
+    if (req.file) {
+      const oldBusiness = await BusinessFeature.findById(req.params.id);
+      if (oldBusiness && oldBusiness.image) {
+        deleteFile(oldBusiness.image);
+      }
+      updateData.image = getImagePath(req.file);
+    }
+
+    const business = await BusinessFeature.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!business) {
+      if (req.file) deleteFile(`/images/${req.file.filename}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Business not found',
+        statusCode: 404
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Business updated successfully',
+      data: business,
+      statusCode: 200
+    });
+  } catch (error) {
+    if (req.file) deleteFile(`/images/${req.file.filename}`);
+    return res.status(500).json({
+      success: false,
+      message: 'Error updating business',
+      error: error.message,
+      statusCode: 500
+    });
+  }
+};
+
+exports.deleteBusiness = async (req, res) => {
+  try {
+    const business = await Event.findByIdAndDelete(req.params.id);
+
+    if (!business) {
+      return res.status(404).json({
+        success: false,
+        message: 'Business not found',
+        statusCode: 404
+      });
+    }
+
+    if (business.image) {
+      deleteFile(business.image);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Business deleted successfully',
+      statusCode: 200
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error deleting business',
       error: error.message,
       statusCode: 500
     });
