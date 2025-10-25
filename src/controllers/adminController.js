@@ -871,7 +871,7 @@ exports.updateBusiness = async (req, res) => {
 
 exports.deleteBusiness = async (req, res) => {
   try {
-    const business = await Event.findByIdAndDelete(req.params.id);
+    const business = await BusinessFeature.findByIdAndDelete(req.params.id);
 
     if (!business) {
       return res.status(404).json({
@@ -883,7 +883,7 @@ exports.deleteBusiness = async (req, res) => {
 
     if (business.image) {
       deleteFile(business.image);
-    }
+    } 
 
     return res.status(200).json({
       success: true,

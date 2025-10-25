@@ -32,7 +32,7 @@ router.put('/persons/:id', uploadSingle, handleMulterErrors, adminController.upd
 router.delete('/persons/:id', adminController.deletePerson);
 
 // ============================================
-// EVENTS ROUTES
+// EVENTS ROUTES 
 // ============================================
 router.post('/events', uploadSingle, handleMulterErrors, adminController.createEvent);
 router.get('/events', adminController.getAllEvents);
